@@ -160,6 +160,29 @@
                     <span v-else>-</span>
                 </template>
             </el-table-column>
+
+            <el-table-column label="操作" width="150" align="center" fixed="right">
+                <template #default="scope">
+                    <el-dropdown @command="(command) => handleStatusUpdate(scope.row.id, command)">
+                        <el-button type="primary" size="small">
+                            修改状态 <i class="bi bi-chevron-down"></i>
+                        </el-button>
+                        <template #dropdown>
+                            <el-dropdown-menu>
+                                <el-dropdown-item command="unused" :disabled="scope.row.status === 'unused'">
+                                    <el-tag type="info" size="small">未使用</el-tag>
+                                </el-dropdown-item>
+                                <el-dropdown-item command="used" :disabled="scope.row.status === 'used'">
+                                    <el-tag type="success" size="small">已使用</el-tag>
+                                </el-dropdown-item>
+                                <el-dropdown-item command="expired" :disabled="scope.row.status === 'expired'">
+                                    <el-tag type="danger" size="small">已过期</el-tag>
+                                </el-dropdown-item>
+                            </el-dropdown-menu>
+                        </template>
+                    </el-dropdown>
+                </template>
+            </el-table-column>
         </el-table>
 
         <div style="margin-top: 16px; display: flex; justify-content: center;">
@@ -416,6 +439,19 @@ createApp({
             }
         };
 
+        const handleStatusUpdate = async (accountId, newStatus) => {
+            try {
+                const response = await axios.post(`/admin/api/accounts/update-status/${accountId}`, null, {
+                    params: { status: newStatus }
+                });
+                
+                ElMessage.success(response.data.message || '状态更新成功');
+                loadAccounts();
+            } catch (error) {
+                ElMessage.error('状态更新失败: ' + (error.response?.data?.detail || error.message));
+            }
+        };
+
         onMounted(() => {
             loadColumnPreference();
             loadAccounts();
@@ -428,7 +464,8 @@ createApp({
             accountCountText, sortChips,
             loadAccounts, handleStatusChange, handlePageSizeChange,
             handleUpload, handleFileChange, handleUploadSubmit,
-            handleColumnSort, getSortIcon, removeSort, copyText, truncate, formatDateTime, saveColumnPreference
+            handleColumnSort, getSortIcon, removeSort, copyText, truncate, formatDateTime, saveColumnPreference,
+            handleStatusUpdate
         };
     }
 }).use(ElementPlus).mount('#accountApp');

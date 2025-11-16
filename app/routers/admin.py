@@ -407,6 +407,42 @@ async def toggle_key_disable(
         "is_disabled": key.is_disabled
     }
 
+@router.post("/api/accounts/update-status/{account_id}")
+async def update_account_status(
+    account_id: int,
+    status: str,
+    username: str = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """手动修改账号状态"""
+    # 验证状态值
+    if status not in ["unused", "used", "expired"]:
+        raise HTTPException(status_code=400, detail="无效的状态值，必须是 unused、used 或 expired")
+    
+    # 查找账号
+    account = db.query(Account).filter(Account.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="账号不存在")
+    
+    old_status = account.status.value
+    
+    # 更新状态
+    account.status = AccountStatus[status]
+    
+    # 如果设置为已使用状态，更新分配时间
+    if status == "used" and not account.assigned_at:
+        account.assigned_at = datetime.utcnow()
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": f"账号状态已从 {old_status} 更新为 {status}",
+        "account_id": account_id,
+        "old_status": old_status,
+        "new_status": status
+    }
+
 @router.post("/api/accounts/upload")
 async def upload_accounts(
     files: List[UploadFile] = File(...),
